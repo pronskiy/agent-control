@@ -17,9 +17,21 @@ import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.awt.*
 import javax.swing.*
 
+internal fun containsWidget(parent: Component, target: Component): Boolean {
+    if (parent === target) return true
+    if (parent is Container) {
+        for (child in parent.components) {
+            if (containsWidget(child, target)) return true
+        }
+    }
+    return false
+}
+
 class MyToolWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+        project.service<ClaudeHooksInstaller>().ensureHooksInstalled()
+
         val panel = KanbanBoardPanel(project)
         val content = ContentFactory.getInstance().createContent(panel, null, false)
         toolWindow.contentManager.addContent(content)
@@ -32,6 +44,7 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
 
     private val idleColumn = ColumnPanel(MyBundle.message("kanban.idle"))
     private val runningColumn = ColumnPanel(MyBundle.message("kanban.running"))
+    private val awaitingColumn = ColumnPanel(MyBundle.message("kanban.awaitingInput"))
     private val completedColumn = ColumnPanel(MyBundle.message("kanban.completed"))
     private val trackingService = project.service<TerminalTrackingService>()
 
@@ -47,10 +60,11 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
             }, BorderLayout.EAST)
         }
 
-        val columnsPanel = JBPanel<JBPanel<*>>(GridLayout(1, 3, 8, 0)).apply {
+        val columnsPanel = JBPanel<JBPanel<*>>(GridLayout(1, 4, 8, 0)).apply {
             border = JBUI.Borders.empty(0, 8, 8, 8)
             add(idleColumn)
             add(runningColumn)
+            add(awaitingColumn)
             add(completedColumn)
         }
 
@@ -77,7 +91,8 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
 
     private fun updateCards(cards: List<TerminalCardData>) {
         idleColumn.setCards(cards.filter { it.state == TerminalState.IDLE }, project)
-        runningColumn.setCards(cards.filter { it.state == TerminalState.RUNNING }, project)
+        runningColumn.setCards(cards.filter { it.state == TerminalState.RUNNING || it.state == TerminalState.CLAUDE_WORKING }, project)
+        awaitingColumn.setCards(cards.filter { it.state == TerminalState.CLAUDE_WAITING }, project)
         completedColumn.setCards(cards.filter { it.state == TerminalState.COMPLETED }, project)
     }
 }
@@ -137,7 +152,8 @@ private class TerminalCardPanel(
     private val project: Project,
 ) : JBPanel<JBPanel<*>>() {
 
-    private val defaultBackground = JBColor(Color(245, 245, 245), Color(60, 63, 65))
+    private val claudeBackground = JBColor(Color(240, 235, 250), Color(65, 58, 80))
+    private val defaultBackground = if (cardData.isClaudeCode) claudeBackground else JBColor(Color(245, 245, 245), Color(60, 63, 65))
     private val highlightBackground = JBColor(Color(200, 220, 255), Color(75, 90, 120))
 
     init {
@@ -153,11 +169,31 @@ private class TerminalCardPanel(
 
         val smallFont = font.deriveFont(font.size - 3f)
 
+        if (cardData.isClaudeCode) {
+            val badgeLabel = JBLabel(MyBundle.message("kanban.claude.badge")).apply {
+                font = smallFont.deriveFont(Font.BOLD)
+                foreground = JBColor(Color(120, 80, 200), Color(180, 150, 240))
+                alignmentX = Component.LEFT_ALIGNMENT
+            }
+            add(badgeLabel)
+            add(Box.createRigidArea(Dimension(0, 2)))
+        }
+
         val nameLabel = JBLabel(cardData.title).apply {
             font = smallFont.deriveFont(Font.BOLD)
             alignmentX = Component.LEFT_ALIGNMENT
         }
         add(nameLabel)
+
+        if (cardData.isClaudeCode && cardData.state == TerminalState.CLAUDE_WAITING) {
+            add(Box.createRigidArea(Dimension(0, 2)))
+            val waitingLabel = JBLabel(MyBundle.message("kanban.claude.waiting")).apply {
+                font = smallFont
+                foreground = JBColor(Color(120, 80, 200), Color(180, 150, 240))
+                alignmentX = Component.LEFT_ALIGNMENT
+            }
+            add(waitingLabel)
+        }
 
         if (cardData.lastCommand.isNotEmpty()) {
             add(Box.createRigidArea(Dimension(0, 2)))
@@ -206,16 +242,6 @@ private class TerminalCardPanel(
             }
         }
         highlightBriefly()
-    }
-
-    private fun containsWidget(parent: Component, target: Component): Boolean {
-        if (parent === target) return true
-        if (parent is Container) {
-            for (child in parent.components) {
-                if (containsWidget(child, target)) return true
-            }
-        }
-        return false
     }
 
     private fun highlightBriefly() {

@@ -21,7 +21,16 @@
       "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/JBTerminalWidget.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)",
       "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/session/TerminalSession.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)",
       "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/ui/TerminalWidget.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)",
-      "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/TerminalTitleListener.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)"
+      "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/TerminalTitleListener.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(brew list:*)",
+      "Bash(export JAVA_HOME=\"$HOME/Library/Java/JavaVirtualMachines/jbr-21.0.8/Contents/Home\")",
+      "Bash(/Users/pronskiy/projects/agent-control/gradlew build:*)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
   }
 }
