@@ -199,6 +199,7 @@ private class TerminalCardPanel(
         alignmentX = Component.LEFT_ALIGNMENT
 
         val smallFont = font.deriveFont(font.size - 3f)
+        val tinyFont = font.deriveFont(font.size - 5f)
 
         if (cardData.isClaudeCode) {
             val badgeLabel = JBLabel(MyBundle.message("kanban.claude.badge")).apply {
@@ -229,7 +230,7 @@ private class TerminalCardPanel(
         if (cardData.lastCommand.isNotEmpty()) {
             add(Box.createRigidArea(Dimension(0, 2)))
             val commandLabel = JBLabel(truncate(cardData.lastCommand, 40)).apply {
-                font = Font(Font.MONOSPACED, Font.PLAIN, smallFont.size)
+                font = Font(Font.MONOSPACED, Font.PLAIN, tinyFont.size)
                 foreground = JBColor.GRAY
                 alignmentX = Component.LEFT_ALIGNMENT
             }
@@ -239,7 +240,7 @@ private class TerminalCardPanel(
         if (cardData.outputPreview.isNotEmpty()) {
             add(Box.createRigidArea(Dimension(0, 2)))
             val outputArea = JBLabel("<html>${cardData.outputPreview.replace("\n", "<br>")}</html>").apply {
-                font = Font(Font.MONOSPACED, Font.PLAIN, smallFont.size)
+                font = Font(Font.MONOSPACED, Font.PLAIN, tinyFont.size)
                 foreground = JBColor.GRAY
                 alignmentX = Component.LEFT_ALIGNMENT
             }
