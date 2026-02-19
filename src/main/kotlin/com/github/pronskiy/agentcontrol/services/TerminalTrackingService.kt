@@ -2,10 +2,12 @@ package com.github.pronskiy.agentcontrol.services
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.terminal.ui.TerminalWidget
 import kotlinx.coroutines.*
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
+import javax.swing.SwingUtilities
 
 enum class TerminalState {
     IDLE, RUNNING, COMPLETED
@@ -38,19 +40,44 @@ class TerminalTrackingService(
         coroutineScope.launch {
             while (isActive) {
                 delay(1000)
+                try {
+                    pollTerminals()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    LOG.warn("Error polling terminals", e)
+                }
+            }
+        }
+    }
+
+    fun triggerPoll() {
+        coroutineScope.launch {
+            delay(200)
+            try {
                 pollTerminals()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LOG.warn("Error polling terminals", e)
             }
         }
     }
 
     private fun pollTerminals() {
+        SwingUtilities.invokeAndWait {
+            pollTerminalsOnEdt()
+        }
+    }
+
+    private fun pollTerminalsOnEdt() {
         val manager = TerminalToolWindowManager.getInstance(project)
         val widgets = manager.terminalWidgets
 
         for (widget in widgets) {
             if (widget !in trackedWidgets) {
                 trackedWidgets.add(widget)
-                widget.addTerminationCallback({ terminatedWidgets.add(widget) }, this)
+                widget.addTerminationCallback({ terminatedWidgets.add(widget) }, this@TerminalTrackingService)
             }
         }
 
@@ -120,5 +147,9 @@ class TerminalTrackingService(
 
     override fun dispose() {
         listeners.clear()
+    }
+
+    companion object {
+        private val LOG = logger<TerminalTrackingService>()
     }
 }

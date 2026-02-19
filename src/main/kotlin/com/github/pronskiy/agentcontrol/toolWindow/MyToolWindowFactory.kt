@@ -72,6 +72,7 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
         TerminalToolWindowManager.getInstance(project).createShellWidget(
             project.basePath, "Terminal", true, true
         )
+        trackingService.triggerPoll()
     }
 
     private fun updateCards(cards: List<TerminalCardData>) {
