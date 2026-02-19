@@ -26,7 +26,10 @@
       "Bash(git commit:*)",
       "Bash(brew list:*)",
       "Bash(export JAVA_HOME=\"$HOME/Library/Java/JavaVirtualMachines/jbr-21.0.8/Contents/Home\")",
-      "Bash(/Users/pronskiy/projects/agent-control/gradlew build:*)"
+      "Bash(/Users/pronskiy/projects/agent-control/gradlew build:*)",
+      "WebFetch(domain:www.jetbrains.com)",
+      "Bash(JAVA_HOME=/Users/pronskiy/Library/Java/JavaVirtualMachines/jbr-21.0.8/Contents/Home ./gradlew build:*)",
+      "Bash(JAVA_HOME=/Users/pronskiy/Library/Java/JavaVirtualMachines/jbr-21.0.8/Contents/Home ./gradlew compileKotlin:*)"
     ]
   },
   "sandbox": {

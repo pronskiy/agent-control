@@ -1,6 +1,11 @@
 package com.github.pronskiy.agentcontrol.toolWindow
 
+import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -87,6 +92,32 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
             project.basePath, "Terminal", true, true
         )
         trackingService.triggerPoll()
+
+        // Move the newly created terminal tab to the editor area and pin it
+        ApplicationManager.getApplication().invokeLater {
+            val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal") ?: return@invokeLater
+            val action = ActionManager.getInstance().getAction("MoveToolWindowTabToEditorAction") ?: return@invokeLater
+
+            val dataContext = SimpleDataContext.builder()
+                .add(PlatformDataKeys.TOOL_WINDOW, toolWindow)
+                .add(CommonDataKeys.PROJECT, project)
+                .build()
+
+            val event = AnActionEvent.createFromDataContext(
+                ActionPlaces.UNKNOWN,
+                action.templatePresentation.clone(),
+                dataContext,
+            )
+            action.actionPerformed(event)
+
+            // Pin the newly opened editor tab
+            ApplicationManager.getApplication().invokeLater {
+                val fem = FileEditorManagerEx.getInstanceEx(project)
+                val window = fem.currentWindow ?: return@invokeLater
+                val file = window.selectedFile ?: return@invokeLater
+                window.setFilePinned(file, true)
+            }
+        }
     }
 
     private fun updateCards(cards: List<TerminalCardData>) {
@@ -229,6 +260,20 @@ private class TerminalCardPanel(
     }
 
     private fun focusTerminal() {
+        // First try to find the terminal in the editor area
+        val fem = FileEditorManager.getInstance(project)
+        for (file in fem.openFiles) {
+            for (editor in fem.getEditors(file)) {
+                if (containsWidget(editor.component, cardData.widget.component)) {
+                    fem.openFile(file, true)
+                    cardData.widget.requestFocus()
+                    highlightBriefly()
+                    return
+                }
+            }
+        }
+
+        // Fall back to Terminal tool window
         val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal") ?: return
         toolWindow.activate {
             val contentManager = toolWindow.contentManager
