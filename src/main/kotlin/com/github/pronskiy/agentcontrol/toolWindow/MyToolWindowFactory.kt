@@ -144,23 +144,25 @@ private class TerminalCardPanel(
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         border = BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(JBColor.border(), 1),
-            JBUI.Borders.empty(8)
+            JBUI.Borders.empty(6)
         )
         background = defaultBackground
         isOpaque = true
-        maximumSize = Dimension(Int.MAX_VALUE, 120)
+        maximumSize = Dimension(Int.MAX_VALUE, 100)
         alignmentX = Component.LEFT_ALIGNMENT
 
+        val smallFont = font.deriveFont(font.size - 3f)
+
         val nameLabel = JBLabel(cardData.title).apply {
-            font = font.deriveFont(Font.BOLD)
+            font = smallFont.deriveFont(Font.BOLD)
             alignmentX = Component.LEFT_ALIGNMENT
         }
         add(nameLabel)
 
         if (cardData.lastCommand.isNotEmpty()) {
-            add(Box.createRigidArea(Dimension(0, 4)))
+            add(Box.createRigidArea(Dimension(0, 2)))
             val commandLabel = JBLabel(truncate(cardData.lastCommand, 40)).apply {
-                font = Font(Font.MONOSPACED, Font.PLAIN, font.size - 1)
+                font = Font(Font.MONOSPACED, Font.PLAIN, smallFont.size)
                 foreground = JBColor.GRAY
                 alignmentX = Component.LEFT_ALIGNMENT
             }
@@ -168,26 +170,26 @@ private class TerminalCardPanel(
         }
 
         if (cardData.outputPreview.isNotEmpty()) {
-            add(Box.createRigidArea(Dimension(0, 4)))
-            val outputArea = JTextArea(cardData.outputPreview).apply {
-                font = Font(Font.MONOSPACED, Font.PLAIN, font.size - 1)
-                rows = 3
-                isEditable = false
-                lineWrap = true
-                wrapStyleWord = true
-                isOpaque = false
-                border = BorderFactory.createEmptyBorder()
+            add(Box.createRigidArea(Dimension(0, 2)))
+            val outputArea = JBLabel("<html>${cardData.outputPreview.replace("\n", "<br>")}</html>").apply {
+                font = Font(Font.MONOSPACED, Font.PLAIN, smallFont.size)
+                foreground = JBColor.GRAY
                 alignmentX = Component.LEFT_ALIGNMENT
             }
             add(outputArea)
         }
 
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        addMouseListener(object : java.awt.event.MouseAdapter() {
+        val clickListener = object : java.awt.event.MouseAdapter() {
             override fun mouseClicked(e: java.awt.event.MouseEvent?) {
                 focusTerminal()
             }
-        })
+        }
+        addMouseListener(clickListener)
+        for (child in components) {
+            child.addMouseListener(clickListener)
+            child.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        }
     }
 
     private fun focusTerminal() {
@@ -219,7 +221,7 @@ private class TerminalCardPanel(
     private fun highlightBriefly() {
         background = highlightBackground
         repaint()
-        Timer(500) {
+        Timer(150) {
             background = defaultBackground
             repaint()
         }.apply {
