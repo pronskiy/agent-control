@@ -1,7 +1,12 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
-# agent-control Changelog
+# Agent Control Changelog
 
-## [Unreleased]
+## [0.0.1]
 ### Added
-- Initial scaffold created from [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template)
+- Kanban board tool window with Idle, Running, Awaiting Input, and Completed columns
+- Real-time terminal state tracking via polling
+- Claude Code session detection with dedicated hooks and badge
+- Click-to-focus navigation from cards to terminal (editor area and tool window)
+- New terminal creation with auto-pin to editor tabs
+- Reduced card font sizes for compact display
