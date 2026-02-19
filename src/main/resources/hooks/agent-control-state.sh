@@ -13,7 +13,9 @@ STATE_FILE="$STATE_DIR/$SESSION_ID.json"
 case "$EVENT" in
   SessionStart)      STATE="idle" ;;
   UserPromptSubmit)  STATE="working" ;;
-  Stop)              STATE="waiting" ;;
+  PermissionRequest) STATE="waiting" ;;
+  PostToolUse)       STATE="working" ;;
+  Stop)              STATE="completed" ;;
   SessionEnd)        rm -f "$STATE_FILE"; exit 0 ;;
   *)                 exit 0 ;;
 esac

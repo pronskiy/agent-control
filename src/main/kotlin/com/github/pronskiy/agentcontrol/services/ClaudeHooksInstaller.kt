@@ -92,6 +92,6 @@ class ClaudeHooksInstaller(private val project: Project) {
 
     companion object {
         private val LOG = logger<ClaudeHooksInstaller>()
-        private val HOOK_EVENTS = listOf("SessionStart", "UserPromptSubmit", "Stop", "SessionEnd")
+        private val HOOK_EVENTS = listOf("SessionStart", "UserPromptSubmit", "PermissionRequest", "PostToolUse", "Stop", "SessionEnd")
     }
 }

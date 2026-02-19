@@ -42,6 +42,8 @@ class TerminalTrackingService(
     private val terminatedWidgets = mutableSetOf<TerminalWidget>()
     private val trackedWidgets = mutableSetOf<TerminalWidget>()
     private val viewedWidgets = mutableMapOf<TerminalWidget, Long>()
+    private val dismissedCompleted = mutableSetOf<TerminalWidget>()
+    private val knownClaudeWidgets = mutableSetOf<TerminalWidget>()
     private val claudeStateReader = ClaudeStateReader()
 
     init {
@@ -110,13 +112,27 @@ class TerminalTrackingService(
                 false
             }
 
-            val isClaude = text.contains("claude") && running
-            val claudeSession = if (isClaude) claudeStateReader.getActiveSession(projectBasePath) else null
+            // Hooks-based Claude detection: if hooks report an active session
+            // and the terminal mentions "claude", mark it as Claude (sticky)
+            val claudeSession = claudeStateReader.getActiveSession(projectBasePath)
+            if (claudeSession != null && text.contains("claude", ignoreCase = true)) {
+                knownClaudeWidgets.add(widget)
+            }
 
+            val isClaude = widget in knownClaudeWidgets
+
+            // Clear dismissed state when hooks report a non-completed state
+            if (isClaude && claudeSession?.state != "completed") {
+                dismissedCompleted.remove(widget)
+            }
+
+            // State exclusively from hooks for Claude terminals
             val state = when {
                 widget in terminatedWidgets -> TerminalState.COMPLETED
+                isClaude && claudeSession?.state == "completed" && widget !in dismissedCompleted -> TerminalState.COMPLETED
                 isClaude && claudeSession?.state == "working" -> TerminalState.CLAUDE_WORKING
-                isClaude && (claudeSession?.state == "waiting" || claudeSession?.state == "idle") -> TerminalState.CLAUDE_WAITING
+                isClaude && claudeSession?.state == "waiting" -> TerminalState.CLAUDE_WAITING
+                isClaude -> TerminalState.IDLE
                 running -> TerminalState.RUNNING
                 else -> TerminalState.IDLE
             }
@@ -163,7 +179,11 @@ class TerminalTrackingService(
             if (isViewed) {
                 val viewedSince = viewedWidgets.getOrPut(widget) { now }
                 if (now - viewedSince >= 3000) {
-                    terminatedWidgets.remove(widget)
+                    if (widget in terminatedWidgets) {
+                        terminatedWidgets.remove(widget)
+                    } else {
+                        dismissedCompleted.add(widget)
+                    }
                     viewedWidgets.remove(widget)
                 }
             } else {
@@ -175,7 +195,8 @@ class TerminalTrackingService(
 
         // Rebuild cards list to reflect any COMPLETED→IDLE transitions
         val updatedCards = cards.map { card ->
-            if (card.state == TerminalState.COMPLETED && card.widget !in terminatedWidgets) {
+            if (card.state == TerminalState.COMPLETED && card.widget !in terminatedWidgets
+                && card.widget in dismissedCompleted) {
                 card.copy(state = TerminalState.IDLE)
             } else card
         }
