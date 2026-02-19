@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Bash(git -C /Users/pronskiy/projects/agent-control log --oneline -10)",
+      "WebSearch",
+      "WebFetch(domain:plugins.jetbrains.com)",
+      "WebFetch(domain:platform.jetbrains.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:blog.jetbrains.com)",
+      "WebFetch(domain:intellij-support.jetbrains.com)",
+      "Bash(jar tf:*)",
+      "Bash(find \"/Users/pronskiy/.gradle/caches/9.3.1/transforms/db201f15deeb8dc2932ecb2be2563710/transformed/ideaIU-2025.2.5-aarch64\" -name \"*.jar\" -exec sh -c 'jar tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/ui/TerminalWidget.class\"\" && echo \"\"$1\"\"' _ {} ;)",
+      "Bash(javap:*)",
+      "Bash(TERMINAL_JAR=\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/db201f15deeb8dc2932ecb2be2563710/transformed/ideaIU-2025.2.5-aarch64/plugins/terminal/lib/terminal.jar\")",
+      "Bash(find \"/Users/pronskiy/.gradle/caches/9.3.1/transforms/db201f15deeb8dc2932ecb2be2563710/transformed/ideaIU-2025.2.5-aarch64\" -name \"*.jar\" -exec sh -c 'jar tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/session/TerminalOutputBlock.class\"\" && echo \"\"$1\"\"' _ {} ;)",
+      "Bash(APP_JAR=\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/db201f15deeb8dc2932ecb2be2563710/transformed/ideaIU-2025.2.5-aarch64/lib/app-client.jar\":*)",
+      "Bash(jar -tf:*)",
+      "Bash(xargs -I {} bash -c 'jar -tf {} 2>/dev/null | grep -l \"\"class com.intellij.terminal.JBTerminalWidget\"\"')",
+      "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/JBTerminalWidget.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)",
+      "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/session/TerminalSession.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)",
+      "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/ui/TerminalWidget.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)",
+      "Bash(find . -name \"*.jar\" -exec bash -c 'if jar -tf \"\"$1\"\" 2>/dev/null | grep -q \"\"com/intellij/terminal/TerminalTitleListener.class\"\"; then echo \"\"$1\"\"; fi' _ {} ;)"
+    ]
+  }
+}
