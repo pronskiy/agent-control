@@ -5,11 +5,11 @@
     <vendor>pronskiy</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.pronskiy.agentcontrol.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="com.github.pronskiy.agentcontrol.startup.MyProjectActivity" />
+        <toolWindow factoryClass="com.github.pronskiy.agentcontrol.toolWindow.MyToolWindowFactory" id="AgentControl"/>
     </extensions>
 </idea-plugin>
