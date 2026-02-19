@@ -123,6 +123,14 @@ class TerminalTrackingService(
         ApplicationManager.getApplication().invokeAndWait({
             val projectBasePath = project.basePath ?: ""
             val activeWidgets = collectedData.map { it.widget }.toSet()
+
+            // Clean up tracking sets for closed tabs to prevent memory leaks
+            terminatedWidgets.removeAll { it !in activeWidgets }
+            trackedWidgets.removeAll { it !in activeWidgets }
+            knownClaudeWidgets.removeAll { it !in activeWidgets }
+            viewedWidgets.keys.removeAll { it !in activeWidgets }
+            dismissedCompleted.removeAll { it !in activeWidgets }
+
             val cards = mutableListOf<TerminalCardData>()
 
             for (data in collectedData) {
@@ -159,22 +167,6 @@ class TerminalTrackingService(
                         isClaudeCode = isClaude,
                     )
                 )
-            }
-
-            // Also include terminated widgets no longer in the active set
-            for (widget in terminatedWidgets) {
-                if (widget !in activeWidgets) {
-                    val title = widget.terminalTitle.buildTitle()
-                    cards.add(
-                        TerminalCardData(
-                            widget = widget,
-                            title = title,
-                            state = TerminalState.COMPLETED,
-                            lastCommand = "",
-                            outputPreview = "",
-                        )
-                    )
-                }
             }
 
             // Viewed-state transition: COMPLETED → IDLE after 3s of viewing
