@@ -74,139 +74,150 @@ class TerminalTrackingService(
         }
     }
 
+    private data class CollectedWidgetData(
+        val widget: TerminalWidget,
+        val title: String,
+        val text: String,
+        val outputPreview: String,
+        val lastCommand: String,
+    )
+
     private fun pollTerminals() {
-        ApplicationManager.getApplication().invokeAndWait(
-            { pollTerminalsOnEdt() },
-            ModalityState.nonModal(),
-        )
-    }
+        // Phase 1 (EDT): collect widget data, register callbacks
+        val collectedData = mutableListOf<CollectedWidgetData>()
+        ApplicationManager.getApplication().invokeAndWait({
+            val manager = TerminalToolWindowManager.getInstance(project)
+            val widgets = manager.terminalWidgets
 
-    private fun pollTerminalsOnEdt() {
-        val manager = TerminalToolWindowManager.getInstance(project)
-        val widgets = manager.terminalWidgets
-
-        for (widget in widgets) {
-            if (widget !in trackedWidgets) {
-                trackedWidgets.add(widget)
-                widget.addTerminationCallback({ terminatedWidgets.add(widget) }, this@TerminalTrackingService)
+            for (widget in widgets) {
+                if (widget !in trackedWidgets) {
+                    trackedWidgets.add(widget)
+                    widget.addTerminationCallback({ terminatedWidgets.add(widget) }, this@TerminalTrackingService)
+                }
             }
-        }
 
-        val cards = mutableListOf<TerminalCardData>()
+            for (widget in widgets) {
+                val title = widget.terminalTitle.buildTitle()
+                val text = widget.getText().toString()
+                val lines = text.lines().filter { it.isNotBlank() }
+                val outputPreview = lines.takeLast(3).joinToString("\n")
+                val lastCommand = lines.lastOrNull { it.startsWith("$") || it.startsWith("%") || it.startsWith(">") }
+                    ?.removePrefix("$ ")?.removePrefix("% ")?.removePrefix("> ")
+                    ?: ""
+                collectedData.add(CollectedWidgetData(widget, title, text, outputPreview, lastCommand))
+            }
+        }, ModalityState.nonModal())
 
-        val projectBasePath = project.basePath ?: ""
-
-        for (widget in widgets) {
-            val title = widget.terminalTitle.buildTitle()
-            val text = widget.getText().toString()
-            val lines = text.lines().filter { it.isNotBlank() }
-            val outputPreview = lines.takeLast(3).joinToString("\n")
-            val lastCommand = lines.lastOrNull { it.startsWith("$") || it.startsWith("%") || it.startsWith(">") }
-                ?.removePrefix("$ ")?.removePrefix("% ")?.removePrefix("> ")
-                ?: ""
-
-            val running = try {
-                widget.isCommandRunning()
+        // Phase 2 (background thread): check isCommandRunning() — requires non-EDT
+        val runningMap = mutableMapOf<TerminalWidget, Boolean>()
+        for (data in collectedData) {
+            runningMap[data.widget] = try {
+                data.widget.isCommandRunning()
             } catch (e: Exception) {
-                LOG.debug("isCommandRunning() failed for widget '$title'", e)
+                LOG.debug("isCommandRunning() failed for widget '${data.title}'", e)
                 false
             }
-
-            // Hooks-based Claude detection: if hooks report an active session
-            // and the terminal mentions "claude", mark it as Claude (sticky)
-            val claudeSession = claudeStateReader.getActiveSession(projectBasePath)
-            if (claudeSession != null && text.contains("claude", ignoreCase = true)) {
-                knownClaudeWidgets.add(widget)
-            }
-
-            val isClaude = widget in knownClaudeWidgets
-
-            // Clear dismissed state when hooks report a non-completed state
-            if (isClaude && claudeSession?.state != "completed") {
-                dismissedCompleted.remove(widget)
-            }
-
-            // State exclusively from hooks for Claude terminals
-            val state = when {
-                widget in terminatedWidgets -> TerminalState.COMPLETED
-                isClaude && claudeSession?.state == "completed" && widget !in dismissedCompleted -> TerminalState.COMPLETED
-                isClaude && claudeSession?.state == "working" -> TerminalState.CLAUDE_WORKING
-                isClaude && claudeSession?.state == "waiting" -> TerminalState.CLAUDE_WAITING
-                isClaude -> TerminalState.IDLE
-                running -> TerminalState.RUNNING
-                else -> TerminalState.IDLE
-            }
-
-            cards.add(
-                TerminalCardData(
-                    widget = widget,
-                    title = title,
-                    state = state,
-                    lastCommand = lastCommand,
-                    outputPreview = outputPreview,
-                    isClaudeCode = isClaude,
-                )
-            )
         }
 
-        // Also include terminated widgets no longer in the active set
-        for (widget in terminatedWidgets) {
-            if (widget !in widgets) {
-                val title = widget.terminalTitle.buildTitle()
+        // Phase 3 (EDT): compute states and notify listeners
+        ApplicationManager.getApplication().invokeAndWait({
+            val projectBasePath = project.basePath ?: ""
+            val activeWidgets = collectedData.map { it.widget }.toSet()
+            val cards = mutableListOf<TerminalCardData>()
+
+            for (data in collectedData) {
+                val running = runningMap[data.widget] ?: false
+
+                val claudeSession = claudeStateReader.getActiveSession(projectBasePath)
+                if (claudeSession != null && data.text.contains("claude", ignoreCase = true)) {
+                    knownClaudeWidgets.add(data.widget)
+                }
+
+                val isClaude = data.widget in knownClaudeWidgets
+
+                if (isClaude && claudeSession?.state != "completed") {
+                    dismissedCompleted.remove(data.widget)
+                }
+
+                val state = when {
+                    data.widget in terminatedWidgets -> TerminalState.COMPLETED
+                    isClaude && claudeSession?.state == "completed" && data.widget !in dismissedCompleted -> TerminalState.COMPLETED
+                    isClaude && claudeSession?.state == "working" -> TerminalState.CLAUDE_WORKING
+                    isClaude && claudeSession?.state == "waiting" -> TerminalState.CLAUDE_WAITING
+                    isClaude -> TerminalState.IDLE
+                    running -> TerminalState.RUNNING
+                    else -> TerminalState.IDLE
+                }
+
                 cards.add(
                     TerminalCardData(
-                        widget = widget,
-                        title = title,
-                        state = TerminalState.COMPLETED,
-                        lastCommand = "",
-                        outputPreview = "",
+                        widget = data.widget,
+                        title = data.title,
+                        state = state,
+                        lastCommand = data.lastCommand,
+                        outputPreview = data.outputPreview,
+                        isClaudeCode = isClaude,
                     )
                 )
             }
-        }
 
-        // Viewed-state transition: COMPLETED → IDLE after 3s of viewing
-        val terminalToolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
-        val selectedComponent = if (terminalToolWindow != null && terminalToolWindow.isVisible) {
-            terminalToolWindow.contentManager.selectedContent?.component
-        } else null
+            // Also include terminated widgets no longer in the active set
+            for (widget in terminatedWidgets) {
+                if (widget !in activeWidgets) {
+                    val title = widget.terminalTitle.buildTitle()
+                    cards.add(
+                        TerminalCardData(
+                            widget = widget,
+                            title = title,
+                            state = TerminalState.COMPLETED,
+                            lastCommand = "",
+                            outputPreview = "",
+                        )
+                    )
+                }
+            }
 
-        val now = System.currentTimeMillis()
-        val completedWidgets = cards.filter { it.state == TerminalState.COMPLETED }.map { it.widget }.toSet()
+            // Viewed-state transition: COMPLETED → IDLE after 3s of viewing
+            val terminalToolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
+            val selectedComponent = if (terminalToolWindow != null && terminalToolWindow.isVisible) {
+                terminalToolWindow.contentManager.selectedContent?.component
+            } else null
 
-        for (widget in completedWidgets) {
-            val isViewed = selectedComponent != null && containsWidget(selectedComponent, widget.component)
-            if (isViewed) {
-                val viewedSince = viewedWidgets.getOrPut(widget) { now }
-                if (now - viewedSince >= 3000) {
-                    if (widget in terminatedWidgets) {
-                        terminatedWidgets.remove(widget)
-                    } else {
-                        dismissedCompleted.add(widget)
+            val now = System.currentTimeMillis()
+            val completedWidgets = cards.filter { it.state == TerminalState.COMPLETED }.map { it.widget }.toSet()
+
+            for (widget in completedWidgets) {
+                val isViewed = selectedComponent != null && containsWidget(selectedComponent, widget.component)
+                if (isViewed) {
+                    val viewedSince = viewedWidgets.getOrPut(widget) { now }
+                    if (now - viewedSince >= 3000) {
+                        if (widget in terminatedWidgets) {
+                            terminatedWidgets.remove(widget)
+                        } else {
+                            dismissedCompleted.add(widget)
+                        }
+                        viewedWidgets.remove(widget)
                     }
+                } else {
                     viewedWidgets.remove(widget)
                 }
-            } else {
-                viewedWidgets.remove(widget)
             }
-        }
-        // Clean up viewedWidgets for widgets that are no longer completed
-        viewedWidgets.keys.removeAll { it !in completedWidgets }
+            viewedWidgets.keys.removeAll { it !in completedWidgets }
 
-        // Rebuild cards list to reflect any COMPLETED→IDLE transitions
-        val updatedCards = cards.map { card ->
-            if (card.state == TerminalState.COMPLETED && card.widget !in terminatedWidgets
-                && card.widget in dismissedCompleted) {
-                card.copy(state = TerminalState.IDLE)
-            } else card
-        }
-
-        if (updatedCards != previousCards) {
-            previousCards = updatedCards
-            for (listener in listeners) {
-                listener.onStateChanged(updatedCards)
+            val updatedCards = cards.map { card ->
+                if (card.state == TerminalState.COMPLETED && card.widget !in terminatedWidgets
+                    && card.widget in dismissedCompleted) {
+                    card.copy(state = TerminalState.IDLE)
+                } else card
             }
-        }
+
+            if (updatedCards != previousCards) {
+                previousCards = updatedCards
+                for (listener in listeners) {
+                    listener.onStateChanged(updatedCards)
+                }
+            }
+        }, ModalityState.nonModal())
     }
 
     fun addListener(listener: TerminalStateListener) {
