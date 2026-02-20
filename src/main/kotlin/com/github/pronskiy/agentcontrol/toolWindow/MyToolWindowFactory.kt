@@ -56,9 +56,6 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
     init {
         val topBar = JBPanel<JBPanel<*>>(BorderLayout()).apply {
             border = JBUI.Borders.empty(6, 10)
-            add(JBLabel(MyBundle.message("kanban.title")).apply {
-                font = font.deriveFont(Font.BOLD, 14f)
-            }, BorderLayout.WEST)
             add(JButton(MyBundle.message("kanban.newTerminal")).apply {
                 toolTipText = "Create new terminal session"
                 addActionListener { createNewTerminal() }
