@@ -48,7 +48,9 @@
       "Bash(then echo \"FOUND: $jar\")",
       "Bash(# Try with the app bundle path IDEA_APP=\"\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/a35c03232f8d21dc63401ab0abdbe8a3-ed7fe734-ddf1-4ef5-88fd-c9bb0383dc12/transformed/idea-261.20362.25-aarch64/IntelliJ IDEA 2026.1 EAP.app/Contents\"\" find \"\"$IDEA_APP\"\" -name \"\"*.jar\"\")",
       "Bash(break)",
-      "Bash(/dev/null -exec sh -c 'unzip -l \"\"$1\"\" 2>/dev/null | grep -q \"\"TerminalToolWindowManager\"\" && echo \"\"$1\"\"' _ {} ;)"
+      "Bash(/dev/null -exec sh -c 'unzip -l \"\"$1\"\" 2>/dev/null | grep -q \"\"TerminalToolWindowManager\"\" && echo \"\"$1\"\"' _ {} ;)",
+      "mcp__jetbrains__search_symbol",
+      "Bash(gh search code:*)"
     ]
   },
   "sandbox": {
