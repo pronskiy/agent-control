@@ -5,12 +5,14 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.terminal.ui.TerminalWidget
 import com.github.pronskiy.agentcontrol.toolWindow.containsWidget
 import kotlinx.coroutines.*
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
+import org.jetbrains.plugins.terminal.vfs.TerminalSessionVirtualFileImpl
 
 enum class TerminalState {
     IDLE, RUNNING, COMPLETED,
@@ -87,7 +89,18 @@ class TerminalTrackingService(
         val collectedData = mutableListOf<CollectedWidgetData>()
         ApplicationManager.getApplication().invokeAndWait({
             val manager = TerminalToolWindowManager.getInstance(project)
-            val widgets = manager.terminalWidgets
+            val toolWindowWidgets = manager.terminalWidgets
+
+            // Also find terminal widgets that were moved to the editor area
+            val editorWidgets = mutableSetOf<TerminalWidget>()
+            val fem = FileEditorManager.getInstance(project)
+            for (file in fem.openFiles) {
+                if (file is TerminalSessionVirtualFileImpl) {
+                    editorWidgets.add(file.terminalWidget)
+                }
+            }
+
+            val widgets = toolWindowWidgets + editorWidgets
 
             for (widget in widgets) {
                 if (widget !in trackedWidgets) {

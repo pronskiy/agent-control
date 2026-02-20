@@ -96,10 +96,11 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
         // Move the newly created terminal tab to the editor area and pin it
         ApplicationManager.getApplication().invokeLater {
             val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal") ?: return@invokeLater
-            val action = ActionManager.getInstance().getAction("MoveToolWindowTabToEditorAction") ?: return@invokeLater
+            val action = ActionManager.getInstance().getAction("Terminal.MoveToEditor") ?: return@invokeLater
 
             val dataContext = SimpleDataContext.builder()
                 .add(PlatformDataKeys.TOOL_WINDOW, toolWindow)
+                .add(PlatformDataKeys.TOOL_WINDOW_CONTENT_MANAGER, toolWindow.contentManager)
                 .add(CommonDataKeys.PROJECT, project)
                 .build()
 

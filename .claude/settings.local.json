@@ -30,7 +30,25 @@
       "WebFetch(domain:www.jetbrains.com)",
       "Bash(JAVA_HOME=/Users/pronskiy/Library/Java/JavaVirtualMachines/jbr-21.0.8/Contents/Home ./gradlew build:*)",
       "Bash(JAVA_HOME=/Users/pronskiy/Library/Java/JavaVirtualMachines/jbr-21.0.8/Contents/Home ./gradlew compileKotlin:*)",
-      "Bash(export JAVA_HOME:*)"
+      "Bash(export JAVA_HOME:*)",
+      "mcp__jetbrains__get_file_text_by_path",
+      "Bash(while read jar)",
+      "Bash(do jar tf:*)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(do if jar tf \"$jar\")",
+      "Bash(then echo \"FOUND in $jar\")",
+      "Bash(fi)",
+      "Bash(then echo \"FOUND in $jar:\")",
+      "Bash(then echo \" -> $jar\")",
+      "Bash(# Check for action ID registrations in the terminal plugin jar tf \"\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/a35c03232f8d21dc63401ab0abdbe8a3/transformed/idea-261.20362.25-aarch64/plugins/terminal/lib/terminal.jar\"\")",
+      "Bash(# Search for action registrations with the terminal move action across the IDE IDEA_DIR=\"\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/a35c03232f8d21dc63401ab0abdbe8a3/transformed/idea-261.20362.25-aarch64\"\" find \"\"$IDEA_DIR\"\" -name \"\"*.xml\"\")",
+      "Bash(# Look inside the terminal plugin directory for XML files TERMINAL_DIR=\"\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/a35c03232f8d21dc63401ab0abdbe8a3/transformed/idea-261.20362.25-aarch64/plugins/terminal\"\" find \"\"$TERMINAL_DIR\"\" -name \"\"*.xml\"\")",
+      "Bash(# Find the base class in platform JARs find \"\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/a35c03232f8d21dc63401ab0abdbe8a3/transformed/idea-261.20362.25-aarch64\"\" -name \"\"*.jar\"\")",
+      "Bash(then echo \"FOUND: $jar\")",
+      "Bash(# Try with the app bundle path IDEA_APP=\"\"/Users/pronskiy/.gradle/caches/9.3.1/transforms/a35c03232f8d21dc63401ab0abdbe8a3-ed7fe734-ddf1-4ef5-88fd-c9bb0383dc12/transformed/idea-261.20362.25-aarch64/IntelliJ IDEA 2026.1 EAP.app/Contents\"\" find \"\"$IDEA_APP\"\" -name \"\"*.jar\"\")",
+      "Bash(break)",
+      "Bash(/dev/null -exec sh -c 'unzip -l \"\"$1\"\" 2>/dev/null | grep -q \"\"TerminalToolWindowManager\"\" && echo \"\"$1\"\"' _ {} ;)"
     ]
   },
   "sandbox": {
