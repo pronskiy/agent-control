@@ -46,6 +46,7 @@ class TerminalTrackingService(
     private val viewedWidgets = mutableMapOf<TerminalWidget, Long>()
     private val dismissedCompleted = mutableSetOf<TerminalWidget>()
     private val knownClaudeWidgets = mutableSetOf<TerminalWidget>()
+    private val widgetSessionMap = mutableMapOf<TerminalWidget, String>()
     private val claudeStateReader = ClaudeStateReader()
 
     init {
@@ -143,28 +144,51 @@ class TerminalTrackingService(
             knownClaudeWidgets.removeAll { it !in activeWidgets }
             viewedWidgets.keys.removeAll { it !in activeWidgets }
             dismissedCompleted.removeAll { it !in activeWidgets }
+            widgetSessionMap.keys.removeAll { it !in activeWidgets }
+
+            // Get all active sessions for this project
+            val activeSessions = claudeStateReader.getActiveSessions(projectBasePath)
+            val activeSessionIds = activeSessions.map { it.sessionId }.toSet()
+
+            // Clean up mappings for sessions that no longer exist
+            widgetSessionMap.entries.removeAll { it.value !in activeSessionIds }
 
             val cards = mutableListOf<TerminalCardData>()
 
             for (data in collectedData) {
                 val running = runningMap[data.widget] ?: false
 
-                val claudeSession = claudeStateReader.getActiveSession(projectBasePath)
-                if (claudeSession != null && data.text.contains("claude", ignoreCase = true)) {
+                if (activeSessions.isNotEmpty() && data.text.contains("claude", ignoreCase = true)) {
                     knownClaudeWidgets.add(data.widget)
                 }
 
                 val isClaude = data.widget in knownClaudeWidgets
 
-                if (isClaude && claudeSession?.state != "completed") {
+                // Map this widget to its specific session if not already mapped
+                if (isClaude && data.widget !in widgetSessionMap) {
+                    val mappedSessionIds = widgetSessionMap.values.toSet()
+                    val unmappedSession = activeSessions
+                        .filter { it.sessionId !in mappedSessionIds }
+                        .maxByOrNull { it.timestamp }
+                    if (unmappedSession != null) {
+                        widgetSessionMap[data.widget] = unmappedSession.sessionId
+                    }
+                }
+
+                // Look up THIS widget's specific session
+                val widgetSession = widgetSessionMap[data.widget]?.let { sid ->
+                    activeSessions.find { it.sessionId == sid }
+                }
+
+                if (isClaude && widgetSession?.state != "completed") {
                     dismissedCompleted.remove(data.widget)
                 }
 
                 val state = when {
                     data.widget in terminatedWidgets -> TerminalState.COMPLETED
-                    isClaude && claudeSession?.state == "completed" && data.widget !in dismissedCompleted -> TerminalState.COMPLETED
-                    isClaude && claudeSession?.state == "working" -> TerminalState.CLAUDE_WORKING
-                    isClaude && claudeSession?.state == "waiting" -> TerminalState.CLAUDE_WAITING
+                    isClaude && widgetSession?.state == "completed" && data.widget !in dismissedCompleted -> TerminalState.COMPLETED
+                    isClaude && widgetSession?.state == "working" -> TerminalState.CLAUDE_WORKING
+                    isClaude && widgetSession?.state == "waiting" -> TerminalState.CLAUDE_WAITING
                     isClaude -> TerminalState.IDLE
                     running -> TerminalState.RUNNING
                     else -> TerminalState.IDLE
