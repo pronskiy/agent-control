@@ -7,7 +7,7 @@
 <!-- Plugin description -->
 Monitor and manage terminal sessions from a Kanban-style board inside your IDE.
 
-[<img src="https://gist.github.com/user-attachments/assets/53e59c86-b99a-49b0-bcf1-98e709030451" width=367>](https://plugins.jetbrains.com/plugin/30469-agent-control)
+**[Get From Marketplace](https://plugins.jetbrains.com/plugin/30469-agent-control)**
 
 Agent Control adds a tool window that displays all terminal sessions as cards organized across status columns — Idle, Running, Awaiting Input, and Completed. Cards update in real-time and are clickable to jump to the corresponding terminal.
 
