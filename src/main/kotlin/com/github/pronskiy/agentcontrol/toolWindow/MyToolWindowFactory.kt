@@ -1,7 +1,6 @@
 package com.github.pronskiy.agentcontrol.toolWindow
 
 import com.intellij.openapi.actionSystem.*
-import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -97,18 +96,8 @@ private class KanbanBoardPanel(private val project: Project) : JBPanel<JBPanel<*
             val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal") ?: return@invokeLater
             val action = ActionManager.getInstance().getAction("Terminal.MoveToEditor") ?: return@invokeLater
 
-            val dataContext = SimpleDataContext.builder()
-                .add(PlatformDataKeys.TOOL_WINDOW, toolWindow)
-                .add(PlatformDataKeys.TOOL_WINDOW_CONTENT_MANAGER, toolWindow.contentManager)
-                .add(CommonDataKeys.PROJECT, project)
-                .build()
-
-            val event = AnActionEvent.createFromDataContext(
-                ActionPlaces.UNKNOWN,
-                action.templatePresentation.clone(),
-                dataContext,
-            )
-            action.actionPerformed(event)
+            val contextComponent = toolWindow.contentManager.selectedContent?.component ?: toolWindow.component
+            ActionManager.getInstance().tryToExecute(action, null, contextComponent, ActionPlaces.UNKNOWN, true)
 
             // Pin the newly opened editor tab
             ApplicationManager.getApplication().invokeLater {
