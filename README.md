@@ -1,3 +1,7 @@
+> [!NOTE]
+> The plugin is deprecated in favor of [Agent Workbench](https://plugins.jetbrains.com/plugin/30926-agent-workbench).
+
+
 # Agent Control
 
 ![Build](https://github.com/pronskiy/agent-control/workflows/Build/badge.svg)
